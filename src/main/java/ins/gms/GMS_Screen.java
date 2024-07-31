@@ -38,7 +38,7 @@ public class GMS_Screen extends GuiScreen {
 
             @Override
             public void drawVanillaIcon(GMS_Screen gui, int x, int y) {
-                ItemStack stack = new ItemStack(Items.iron_shovel);
+                ItemStack stack = new ItemStack(Items.iron_sword);
                 gui.drawItem(stack, x, y);
             }
         },
