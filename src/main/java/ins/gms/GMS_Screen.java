@@ -2,7 +2,6 @@ package ins.gms;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
@@ -108,23 +107,36 @@ public class GMS_Screen extends GuiScreen {
         }
     }
 
-    private int selectedMode = 0;
+    private int selectedMode;
+    private static int lastMode = -1;
+    private static int lastModeOnClose = -1;
 
     public GMS_Screen(Minecraft mc, WorldSettings.GameType gameMode) {
         this.mc = mc;
+        keyDown = true;
         selectedMode = switch (gameMode) {
             case CREATIVE -> 0;
             case SURVIVAL -> 1;
             case ADVENTURE -> 2;
             default -> throw new IllegalArgumentException("Invalid game mode: " + gameMode);
         };
-        initGui();
+        if (lastMode == -1) {
+            lastMode = (selectedMode + 1) > 2 ? 0 : selectedMode + 1;
+            lastModeOnClose = lastMode;
+        }
+        if (selectedMode != lastMode) {
+            selectedMode = lastMode;
+        } else {
+            selectedMode = lastModeOnClose;
+            //lastMode = lastModeOnClose;
+        }
     }
 
     private final ModeButton[] buttons = new ModeButton[3];
     private int left, top;
-    private int lastMouseX = 0, lastMouseY = 0;
-    private boolean keyDown = false;
+    private int lastMouseX, lastMouseY;
+    private boolean keyDown;
+    private boolean mouseInit = false;
 
     @Override
     public void setWorldAndResolution(Minecraft mc, int width, int height) {
@@ -149,6 +161,9 @@ public class GMS_Screen extends GuiScreen {
     @Override
     public void updateScreen() {
         if (!Keyboard.isKeyDown(61)) {
+            if (lastModeOnClose == lastMode && lastModeOnClose != selectedMode) {
+                lastModeOnClose = selectedMode;
+            }
             mc.displayGuiScreen(null);
             mc.thePlayer.sendChatMessage(GameMode.values()[selectedMode].getCommand());
         }
@@ -159,14 +174,20 @@ public class GMS_Screen extends GuiScreen {
         super.handleKeyboardInput();
         if (Keyboard.getEventKeyState() && Keyboard.isKeyDown(62) && !keyDown) {
             keyDown = true;
+            lastMode = selectedMode;
             selectedMode = (selectedMode + 1) > 2 ? 0 : selectedMode + 1;
-        } else {
+        } else if (!Keyboard.isKeyDown(62)) {
             keyDown = false;
         }
     }
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        if (!mouseInit) {
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+            mouseInit = true;
+        }
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glEnable(GL11.GL_BLEND);
         {
@@ -200,13 +221,6 @@ public class GMS_Screen extends GuiScreen {
         func_146110_a(x, y, u, v, w, h, tw, th);
     }
 
-    private void addVertexWithUV(double x, double y, double u, double v) {
-        Tessellator.instance.addVertexWithUV(x, y, this.zLevel, u, v);
-    }
-
-    // itemRender.renderItemAndEffectIntoGUI(font, this.mc.getTextureManager(), stack, x, y);
-    // itemRender.renderItemOverlayIntoGUI(font, this.mc.getTextureManager(), stack, x, y - (this.draggedStack == null ?
-    // 0 : 8), altText);
     protected void drawItem(ItemStack stack, int x, int y) {
         itemRender.renderItemOverlayIntoGUI(fontRendererObj, mc.getTextureManager(), stack, x, y);
         itemRender.renderItemIntoGUI(fontRendererObj, mc.getTextureManager(), stack, x, y, true);
